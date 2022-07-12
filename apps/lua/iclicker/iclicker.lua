@@ -2,7 +2,7 @@
 --  IClicker, audible indicators lua app for ac by Halvhjearne	--
 ------------------------------------------------------------------
 --  this is a free app and may not be used in any commercial	--
---  way without written permission from Halvhjearne				--
+--  way without written permission from Halvhjearne		--
 ------------------------------------------------------------------
 
 -- hard set defaults if no defaults are saved yet (pls only change values or script will break)
@@ -23,18 +23,18 @@ local settings = {
 
 --[[
 -------------------------------------------------------------------------------------------------
-|	To add/change sound files and menu names:													|
-|																								|
-|	First add a name to soundNames table, then add an ON and an OFF sound to SFiles table.		|
-|																								|
-|	It is VERY important that soundNames and SFiles has the same ammount of elements or			|
-|	the script might fail. (so if soundNames has 6 names, SFiles must have 6 sets of files)		|
-|																								|
-|	Dont forget to keep it sequential, first name in soundNames refers to the first set	of 		|
-|	files in SFiles, second name in soundNames refers to second set of files in SFiles etc.		|
-|																								|
-|	Most formats will work like flac, ogg and many others, but some systems may only support	|
-|	wav and mp3.																				|
+|	To add/change sound files and menu names:						|
+|												|
+|	First add a name to soundNames table, then add an ON and an OFF sound to SFiles table.	|
+|												|
+|	It is VERY important that soundNames and SFiles has the same ammount of elements or	|
+|	the script might fail. (so if soundNames has 6 names, SFiles must have 6 sets of files)	|
+|												|
+|	Dont forget to keep it sequential, first name in soundNames refers to the first set of	|
+|	files in SFiles, second name in soundNames refers to second set of files in SFiles etc.	|
+|												|
+|	Most formats will work like flac, ogg and many others, but some systems may only support|
+|	wav and mp3.										|
 -------------------------------------------------------------------------------------------------
 --]]
 
