@@ -6,8 +6,8 @@ this is a free app and may not be used in any commercial way without written per
 
 it is a bit of a crude way to implement it but it works and forgive me if it could have been written it a bit better, but as this is like the second script i ever wrote in lua, i think i did ok.
 
-To install drop the apps folder into assetto corsa root folder.
+To install click the green code icon and press dowload zip, open the zip file and find the apps folder, now drop that into your assetto corsa root folder and you are done.
 
-Known problems: if app is closed the script will stop running (CSP bug?), to fix restart game after closing or minimize only
+Known problems: (in csp version < 0.1.78) if app is closed the script will stop running (CSP bug, should be fixed next csp update), to fix restart game after closing or minimize only
 
 Special thanks to kirkalef and RobPawn for testing and adding soundfx and everyone else who helped me testing
