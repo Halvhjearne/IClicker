@@ -333,31 +333,6 @@ function script.ICMainSettings(dt)
 	if EnableDebug then
 --		ui.dummy(vec2(0,0))
 --		ui.text(string.format('%s: %s', table.indexOf(settings,1),settings.settings.playRate))
--------------------------------------------------------------------------------
---	testing use of soundbanks
---[[
-		ui.dummy(vec2(2,0))
-		ui.sameLine(0, 25)
-		if ui.button('TEST') then
-			ac.loadSoundbank("extension/lua/new-modes/economy-run/sfx/nord_altta.bank")
-			local sound = ac.AudioEvent("nord_altta/finish", false)
-			local camPOS = ac.getCameraPosition() -- vec3(2.0,0.0,2.0)
-			local camDIR = ac.getCameraDirectionTo() -- vec3(2.0,0.0,2.0)
-			local camUP = ac.getCameraUpTo() -- vec3(2.0,0.0,2.0)
---			local camVEL = ac.getCameraForward() -- vec3(2.0,0.0,2.0)
-			local camVEL = car.velocity -- vec3(2.0,0.0,2.0)
-			sound:setPosition(vec3(camPOS),camDIR,nil,vec3(camVEL))
---			sound:setPosition(car.position, car.up, car.look, car.velocity)
-			sound.inAutoLoopMode = false
-			sound.volume = 0.8
-			sound.cameraInteriorMultiplier = 1.0
-			sound.cameraExteriorMultiplier = 0.75
-			sound.cameraTrackMultiplier = 0.75
-			sound:start()
-			ac.setMessage(camVEL,vec3(camVEL))
-		end
---]]
--------------------------------------------------------------------------------
 		if ui.slider('Play rate', RateSlider, 20, 100, 'Rate: %.2f%%') then
 			settings.playRate = tonumber(string.format("%.2f", (RateSlider.value/100)))
 --			ac.setMessage(RateSlider.value,settings.playRate)
@@ -375,6 +350,22 @@ function script.ICMainSettings(dt)
 --		ui.bulletText('CPU occupancy: '..ac.getSim().cpuOccupancy)
 --		ui.bulletText('connected cars: '..tostring(ac.getSim().connectedCars))
 		ui.bulletText('soundNames: '..check1..' - SFiles: '..check2..' - Files check OK: '..tostring(not check4))
+-------------------------------------------------------------------------------
+--	testing use of soundbanks
+		ui.separator()
+		if ui.button('TEST') then
+			ac.loadSoundbank("extension/lua/new-modes/economy-run/sfx/nord_altta.bank")
+			local sound = ac.AudioEvent("nord_altta/finish", false)
+			sound:setPosition(ac.getCameraPosition(), car.look, nil, car.velocity)
+			sound.inAutoLoopMode = false
+			sound.volume = 0.8
+			sound.cameraInteriorMultiplier = 1.0
+			sound.cameraExteriorMultiplier = 0.75
+			sound.cameraTrackMultiplier = 0.75
+			sound:start()
+		end
+		ui.separator()
+-------------------------------------------------------------------------------
 --		ui.bulletText(string.format("car.turningLightsActivePhase: %s", car.turningLightsActivePhase))
 	end
 end
