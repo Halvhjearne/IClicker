@@ -40,12 +40,18 @@ local settings = {
 
 -- names of ON and Off sound files incl. extension (.wav, .mp3, .flac, .ogg etc)
 local SFiles = {
+    -- added part for no soundfx
+    [0] = {
+        ON = '',
+        OFF = '',
+        NAME = 'None',
+    },
     -- here we set same a number, make sure to keep it sequential.
-    [1] = {  -- here we can add the name of the ON sound file
+    [1] = {  -- here we can add the filename of the ON sound file
         ON = 'defaulton.flac',
-              -- here we can add the name of the OFF sound file
+              -- here we can add the filename of the OFF sound file
         OFF = 'defaultoff.flac',
-               -- here we add the name we want shown in menu
+               -- here we add the name we want to shown in the menu
         NAME = 'Default'
     },
     [2] = {
@@ -72,7 +78,7 @@ local SFiles = {
         ON = 'BUSon.flac',
         OFF = 'BUSoff.flac',
         NAME = 'Bus',
-    }
+    },
 }
 
 --[[
@@ -164,12 +170,13 @@ if settings.Delay > 0.7 or settings.Delay < 0.1 then
 end
 
 local valerrTxt = ''
+local savedTxt = ''
 local allgood = true
 for key, value in pairs(SFileVals) do
-    if value > sndfxnum then
+    if value > sndfxnum or value < 0 then
         SFileVals[key] = 1
         allgood = false
-        savedTxt = savedTxt+tostring(key)..' = '..tostring(value)..'?\n'
+        valerrTxt = valerrTxt+tostring(key)..' = '..tostring(value)..'?\n'
     end
 end
 
@@ -183,6 +190,7 @@ ui.MediaPlayer():setAutoPlay(true):setVolume(0)
 --end
 
 local function fncPlayMedia (Sfile,vv,prv)
+    if Sfile == '' then return end
     local myPlayer = ui.MediaPlayer():setAutoPlay(true):setVolume(vv)
     myPlayer:setSource(Sfile):setAutoPlay(true):setVolume(vv):setPlaybackRate(prv)
 end
@@ -297,9 +305,11 @@ function script.ICMainSettings(dt)
         end
         ui.bulletText('Test: '..tostring(doClickOff.Test))
         ui.bulletText('Counter: '..tonumber(string.format("%.4f", counter)))
+        ui.bulletText('car.wiperMode: '..car.wiperMode)
+        ui.bulletText('car.wiperMode: '..math.floor(car.wiperMode, 0.1))
 --        ui.bulletText('CPU occupancy: '..ac.getSim().cpuOccupancy)
 --        ui.bulletText('connected cars: '..tostring(ac.getSim().connectedCars))
-        ui.bulletText('SFiles: '..tostring(sndfxnum)..' - SFileVals: '..tostring(allgood)..'\n'..valerrTxt)
+        ui.bulletText('SFiles: '..tostring(sndfxnum)..' - SFileVals error: '..tostring(allgood)..'\n'..valerrTxt)
 -------------------------------------------------------------------------------
 --    testing use of soundbanks
         ui.separator()
@@ -349,12 +359,12 @@ function script.ICMain(dt)
     ui.header('Main Settings:')
     ui.separator()
     if ui.checkbox("Sync Clicks to indicator lights", settings.EnableSync) then
-        ac.setMessage('Sync may not work yet','... and it may break the script!')
+--        ac.setMessage('Sync may not work yet','... and it may break the script!')
         fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
         settings.EnableSync = not settings.EnableSync
     end
     if ui.itemHovered() then
-        if vercode <= 2076 then ui.setTooltip('Not working yet! (disables indicator soundFX)') end
+        if vercode <= 2076 then ui.setTooltip('Not working yet! (will disable indicator soundFX)') end
     end
     if not settings.EnableSync then
         local delayHz = tonumber(string.format("%.4f", (1/settings.Delay)))
@@ -480,6 +490,7 @@ function script.ICMain(dt)
     else
         ui.pushItemWidth(minsize)
     end
+    ui.bulletText(car.acceleration)
     ui.labelText('* IClicker by Halvhjearne!',savedTxt)
 end
 
@@ -487,11 +498,8 @@ function script.update(dt)
 --    ac.setMessage('turningLights: '..tostring(car.turningLeftLights or car.turningRightLights),'turningLightsActivePhase: '..tostring(car.turningLightsActivePhase))
 -- no need to include hazards
     local IsindicatorsOn = car.turningLeftLights or car.turningRightLights
-    if settings.EnableSync then
-        IsindicatorsOn = false
-        if vercode > 2076 then
-            IsindicatorsOn = car.turningLightsActivePhase
-        end
+    if settings.EnableSync and vercode > 2076 then
+        IsindicatorsOn = car.turningLightsActivePhase and (car.turningLeftLights or car.turningRightLights)
         local files = SFiles[SFileVals.Turn]
         if IsindicatorsOn and not doClickOff.Turn then
             fncPlayMedia (files.ON,settings.Volume,settings.playRate)
@@ -526,7 +534,7 @@ function script.update(dt)
         end
     end
     if settings.EnableWip then
-        local wiperMode = math.round(car.wiperMode, 0.1)
+        local wiperMode = math.floor(car.wiperMode, 0.1)
         local files = SFiles[SFileVals.Wiper]
         if wiperMode ~= 0 and not doClickOff.Wiper then
             fncPlayMedia (files.ON,settings.Volume,settings.playRate)
