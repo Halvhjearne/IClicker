@@ -9,16 +9,9 @@
 local settings = {
     Volume = 0.2, -- from 0.0 to 1.0 above or under will be reset to 0.2
     Delay = 0.357, -- from 0.1 to 0.7 above or under will be reset to 0.357
-    playRate = 1, -- will always be reset to 1 for now
     EnableSync = false, -- true / false
-    EnableWip = true,
-    EnableHB = true,
-    EnableEA = false,
-    EnableEB = false,
-    EnableEC = false,
-    EnableED = false,
-    EnableEE = false,
-    EnableEF = false,
+    Turnsoundfx = 1,
+    menuvolume = 0.2,
     EnableDebug = false
 }
 
@@ -40,12 +33,6 @@ local settings = {
 
 -- names of ON and Off sound files incl. extension (.wav, .mp3, .flac, .ogg etc)
 local SFiles = {
-    -- added part for no soundfx
-    [0] = {
-        ON = '',
-        OFF = '',
-        NAME = 'None',
-    },
     -- here we set same a number, make sure to keep it sequential.
     [1] = {  -- here we can add the filename of the ON sound file
         ON = 'defaulton.flac',
@@ -87,6 +74,27 @@ local SFiles = {
 -------------------------------------------------------------------------------------------------
 --]]
 
+local car = ac.getCar(0)
+local TESTdropdown = 1
+local savedTxt = ''
+local testvar = true
+local counter = 0
+local timeVar = -1
+
+local doClickOff = {
+    Turn = false,
+    Wiper = false,
+    HB = false,
+    LB = false,
+    EA = false,
+    EB = false,
+    EC = false,
+    ED = false,
+    EE = false,
+    EF = false,
+    Test = false
+}
+
 local soundNames = {}
 local sndfxnum = 0
 for i in pairs(SFiles) do
@@ -94,16 +102,17 @@ for i in pairs(SFiles) do
     sndfxnum = sndfxnum+1
 end
 
-local SFileVals = {
-    Turn = 1,
-    Wiper = 1,
-    HB = 1,
-    EA = 1,
-    EB = 1,
-    EC = 1,
-    ED = 1,
-    EE = 1,
-    EF = 1
+local sndsettings = {
+    [0] = {soundfx=1,volume=0.2,name='Wiper',sname='Wiper',command='wiperMode'},
+    [1] = {soundfx=1,volume=0.2,name='Highbeam',sname='HB',command=''},
+    [2] = {soundfx=1,volume=0.2,name='Lowbeam',sname='LB',command='headlightsActive'},
+    [3] = {soundfx=1,volume=0.2,name='Extra A',sname='EA',command='extraA'},
+    [4] = {soundfx=1,volume=0.2,name='Extra B',sname='EB',command='extraB'},
+    [5] = {soundfx=1,volume=0.2,name='Extra C',sname='EC',command='extraC'},
+    [6] = {soundfx=1,volume=0.2,name='Extra D',sname='ED',command='extraD'},
+    [7] = {soundfx=1,volume=0.2,name='Extra E',sname='EE',command='extraE'},
+    [8] = {soundfx=1,volume=0.2,name='Extra F',sname='EF',command='extraF'},
+    [9] = {soundfx=1,volume=0.2,name='Test',sname='Test',command=''}
 }
 
 -- dont run on old version of csp
@@ -119,69 +128,47 @@ if not io.fileExists(ac.getFolder(ac.FolderID.ContentCars)..'/'..ac.getCarID(0).
     end
 end
 
-local dir = ac.getFolder(ac.FolderID.Documents)..'/Assetto Corsa/cfg/extension/iclicker'
+local dir = ac.getFolder(ac.FolderID.ExtCfgUser)..'/iclicker'
 local filename = dir..'/cars/'..ac.getCarID(0)..'.cfg'
 local defaultsfilename = dir..'/defaults.cfg'
 
-
 local loadfile = ''
-if io.fileExists(defaultsfilename) then
-    loadfile = defaultsfilename
-end
 if io.fileExists(filename) then
     loadfile = filename
+elseif io.fileExists(defaultsfilename) then
+    loadfile = defaultsfilename
 end
+
+local valerrTxt = ''
 if loadfile ~= '' then
     local data = ac.INIConfig.load(loadfile)
     for k,v in pairs(settings) do
         settings[k] = data:get('DEFAULTS', k, v)
     end
-    for k,v in pairs(SFileVals) do
-        SFileVals[k] = data:get('SOUNDS', k, v)
+    for i = 0, 8 do
+        sndsettings[i].soundfx = data:get('SOUNDS', sndsettings[i].sname, 1)
+        if sndsettings[i].soundfx > sndfxnum then
+            sndsettings[i].soundfx = 1
+            valerrTxt = valerrTxt+sndsettings[i].name..' = '..sndsettings[i].soundfx..'?\n'
+        end
+        sndsettings[i].volume = data:get('VOLUME', sndsettings[i].sname, sndsettings[i].volume)
+        if sndsettings[i].volume > 1 or sndsettings[i].volume < 0 then
+            sndsettings[i].volume = 0.2
+        end
     end
 end
 
-local counter = 0
-local timeVar = -1
-
-local doClickOff = {
-    Turn = false,
-    Wiper = false,
-    HB = false,
-    EA = false,
-    EB = false,
-    EC = false,
-    ED = false,
-    EE = false,
-    EF = false,
-    Test = false
-}
-
 --checks for possible value problems and resets them in case they are "out of bounds"
---if settings.playRate > 0.2 or settings.playRate < 1 then
-if settings.playRate ~= 1 then
-    settings.playRate = 1
-end
+
 if settings.Volume > 1 or settings.Volume < 0 then
     settings.Volume = 0.2
+end
+if settings.menuvolume > 1 or settings.menuvolume < 0 then
+    settings.menuvolume = 0.2
 end
 if settings.Delay > 0.7 or settings.Delay < 0.1 then
     settings.Delay = 0.357
 end
-
-local valerrTxt = ''
-local savedTxt = ''
-local allgood = true
-for key, value in pairs(SFileVals) do
-    if value > sndfxnum or value < 0 then
-        SFileVals[key] = 1
-        allgood = false
-        valerrTxt = valerrTxt+tostring(key)..' = '..tostring(value)..'?\n'
-    end
-end
-
-local car = ac.getCar(0)
-local TESTdropdown = 1
 
 -- prevent first click delay?
 ui.MediaPlayer():setAutoPlay(true):setVolume(0)
@@ -189,10 +176,15 @@ ui.MediaPlayer():setAutoPlay(true):setVolume(0)
 --    savedTxt = 'OS does not support the media player!'
 --end
 
-local function fncPlayMedia (Sfile,vv,prv)
-    if Sfile == '' then return end
-    local myPlayer = ui.MediaPlayer():setAutoPlay(true):setVolume(vv)
-    myPlayer:setSource(Sfile):setAutoPlay(true):setVolume(vv):setPlaybackRate(prv)
+local function fncPlayMedia (Sfile,vv)
+    if Sfile == '' then return false end
+    if vv > 0.01 then
+        local myPlayer = ui.MediaPlayer():setAutoPlay(true):setVolume(vv)
+        myPlayer:setSource(Sfile):setAutoPlay(true):setVolume(vv):setPlaybackRate(1)
+        return true
+    else
+        return false
+    end
 end
 
 local function FncSetAndSave (carFile)
@@ -203,6 +195,7 @@ local function FncSetAndSave (carFile)
     local data = ac.INIConfig.load(theFile)
     settings.Delay = tonumber(string.format("%.4f", settings.Delay))
     settings.Volume = tonumber(string.format("%.4f", settings.Volume))
+    settings.menuvolume = tonumber(string.format("%.4f", settings.menuvolume))
     if io.fileExists(theFile) then
         io.deleteFile(theFile)
         data = ac.INIConfig.load(theFile)
@@ -212,108 +205,96 @@ local function FncSetAndSave (carFile)
         end
     end
     for k,v in pairs(settings) do
-        data:setAndSave('DEFAULTS', k, v)
+        if k ~= 'EnableDebug' then
+            data:setAndSave('DEFAULTS', k, v)
+        end
     end
-    for k,v in pairs(SFileVals) do
-        data:setAndSave('SOUNDS', k, v)
+    for i = 0, 8 do
+        data:setAndSave('SOUNDS', sndsettings[i].sname, sndsettings[i].soundfx)
+        local volume = tonumber(string.format("%.4f", sndsettings[i].volume))
+        data:setAndSave('VOLUME', sndsettings[i].sname, volume)
     end
+    fncPlayMedia ('Woosh.mp3',settings.menuvolume)
+    return true
 end
-local testvar = true
+
 function script.ICMainSettings(dt)
-    ui.icon('IClicker.png', vec2(14,14), rgbm(0, 1, 0, 1))
+    ui.icon('IClicker.png', vec2(16,16), rgbm(0, 1, 0, 1))
     ui.sameLine(0, 5)
-    ui.header('SoundFX Selector:')
+    ui.header('Other settings:')
     ui.separator()
-    ui.bullet()
-    ui.sameLine(0, 15)
-    SFileVals.Turn = ui.combo('Indicator FX', SFileVals.Turn, soundNames)
-    if settings.EnableWip then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.Wiper = ui.combo('Wiper FX', SFileVals.Wiper, soundNames)
+    ui.bulletText('Menu FX')
+    if ui.checkbox("##Test00", false) then
+        fncPlayMedia ('Unbenannt2.flac',settings.menuvolume)
     end
-    if settings.EnableHB then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.HB = ui.combo('Highbeam FX', SFileVals.HB, soundNames)
-    end
-    if settings.EnableEA then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.EA = ui.combo('Extra A FX', SFileVals.EA, soundNames)
-    end
-    if settings.EnableEB then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.EB = ui.combo('Extra B FX', SFileVals.EB, soundNames)
-    end
-    if settings.EnableEC then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.EC = ui.combo('Extra C FX', SFileVals.EC, soundNames)
-    end
-    if settings.EnableED then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.ED = ui.combo('Extra D FX', SFileVals.ED, soundNames)
-    end
-    if settings.EnableEE then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.EE = ui.combo('Extra E FX', SFileVals.EE, soundNames)
-    end
-    if settings.EnableEF then
-        ui.bullet()
-        ui.sameLine(0, 15)
-        SFileVals.EF = ui.combo('Extra F FX', SFileVals.EF, soundNames)
-    end
+    if ui.itemHovered() then ui.setTooltip('Test volume of menu sounds') end
+    ui.sameLine(0, 5)
+    settings.menuvolume = ui.slider('##menuVolume', settings.menuvolume*100, 0, 100, 'Volume: %.0f%%')/100
+    if ui.itemHovered() then ui.setTooltip('Volume of menu sounds (0 = Off)') end
     ui.separator()
-    ui.bullet()
-    ui.sameLine(0, 15)
-    TESTdropdown = ui.combo('Test Click FX', TESTdropdown, soundNames)
-    if ui.itemHovered() then
-        ui.setTooltip('Select a soundFX to test')
-    end
-    ui.dummy(vec2(2,0))
-    ui.sameLine(0, 229)
-    if ui.checkbox("Click Test", doClickOff.Test) then
-        if ui.keyboardButtonDown(ui.KeyIndex.Control) and ui.keyboardButtonDown(ui.KeyIndex.Shift) then
-            settings.EnableDebug = not settings.EnableDebug
+    ui.bulletText('Sync indicator clicks')
+    if ui.checkbox('##Sync', settings.EnableSync) then
+        fncPlayMedia ('Unbenannt2.flac',settings.menuvolume)
+        if vercode > 2076 then
+            settings.EnableSync = not settings.EnableSync
         else
-            doClickOff.Test = not doClickOff.Test
-            local files = SFiles[TESTdropdown]
-            if doClickOff.Test then
-                fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            else
-                fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            end
+            ac.setMessage('Sync is disabled for now!','Update CSP version (version > 2076) to enable this')
+            settings.EnableSync = false
         end
     end
     if ui.itemHovered() then
-        ui.setTooltip('Test selected soundFX')
+        if vercode > 2076 then
+            ui.setTooltip('Sync clicks to indicator lights')
+        else
+            ui.setTooltip('Update CSP to enable this!')
+        end
     end
+    if not settings.EnableSync then
+        ui.sameLine(0,5)
+        local delayHz = tonumber(string.format("%.4f", (1/settings.Delay)))
+        settings.Delay = ui.slider('##DelayFrequency', settings.Delay, 0.1, 0.7, 'T: %.4fms/F: '..delayHz..'Hz')
+        if ui.itemHovered() then ui.setTooltip('Delay/Frequency of indicator clicks') end
+    end
+    ui.separator()
+    ui.bulletText('Hazards G-forces "problem" fix')
+    if ui.button('Remove HAZARDS_G_THRESHOLD') then
+        local file = ac.getFolder(ac.FolderID.ContentCars)..'/'..ac.getCarID(0)..'/extension/ext_config.ini'
+        if io.fileExists(file) then
+            local data = ac.INIConfig.load(file)
+            data:setAndSave('INSTRUMENTS', 'HAZARDS_G_THRESHOLD', nil)
+        end
+    end
+    if ui.itemHovered() then ui.setTooltip('Fix for hazards by removing HAZARDS_G_THRESHOLD from the cars ext_config.ini?\n\nCAUTION:\nONLY use this if your hazards are going nuts when breaking!!') end
     ui.separator()
     if settings.EnableDebug then
-        settings.playRate = tonumber(string.format("%.2f", (ui.slider('Play rate', settings.playRate*100, 20, 100, 'Rate: %.2f%%')/100)))
-        ui.separator()
-        for k,v in pairs(SFileVals) do
-            local txt = 'Off'
-            if doClickOff[k] then
+        local txt = 'Off'
+        if doClickOff.Turn then
+            txt = 'On'
+        end
+        ui.bulletText(string.format('Indicator: %s - %s - %s, %s', txt, settings.Turnsoundfx, SFiles[settings.Turnsoundfx].ON, SFiles[settings.Turnsoundfx].OFF))
+        for i = 0, 8 do
+            local ssett = sndsettings[i]
+            txt = 'Off'
+            if doClickOff[ssett.sname] then
                 txt = 'On'
             end
-            ui.bulletText(string.format('%s: %s - %s - %s, %s', k, txt, v,SFiles[v].ON,SFiles[v].OFF))
+            ui.bulletText(string.format('%s: %s - %s - %s, %s', ssett.name, txt, ssett.soundfx,SFiles[ssett.soundfx].ON,SFiles[ssett.soundfx].OFF))
         end
-        ui.bulletText('Test: '..tostring(doClickOff.Test))
+        txt = 'Off'
+        if doClickOff.Test then
+            txt = 'On'
+        end
+        ui.bulletText(string.format('Test: %s - %s - %s, %s', txt, TESTdropdown, SFiles[TESTdropdown].ON, SFiles[TESTdropdown].OFF))
         ui.bulletText('Counter: '..tonumber(string.format("%.4f", counter)))
+        ui.bulletText('car.wiperProgress: '..car.wiperProgress)
         ui.bulletText('car.wiperMode: '..car.wiperMode)
-        ui.bulletText('car.wiperMode: '..math.floor(car.wiperMode, 0.1))
 --        ui.bulletText('CPU occupancy: '..ac.getSim().cpuOccupancy)
 --        ui.bulletText('connected cars: '..tostring(ac.getSim().connectedCars))
-        ui.bulletText('SFiles: '..tostring(sndfxnum)..' - SFileVals error: '..tostring(allgood)..'\n'..valerrTxt)
+        ui.bulletText('SFiles: '..tostring(sndfxnum)..' - SFileVals error: '..tostring(valerrTxt ~= '')..'\n'..valerrTxt)
 -------------------------------------------------------------------------------
 --    testing use of soundbanks
         ui.separator()
-        if ui.button('Open driver door') then
+        if ui.button('Open/Close driver door') then
             if testvar then
                 ac.setDriverDoorOpen(car, true)
                 testvar = false
@@ -335,6 +316,7 @@ function script.ICMainSettings(dt)
             sound:start()
         end
         ui.separator()
+        ui.bulletText(ac.getCarID(0))
 
 --        for index, section in iniConfig:iterate('LIGHT') do
 --            print('Color: '..iniConfig:get(section, 'COLOR', 'red'))
@@ -344,180 +326,137 @@ function script.ICMainSettings(dt)
     end
 end
 
+local padding = {[0]=35,[1]=10,[2]=14,[3]=25,[4]=25,[5]=25,[6]=24,[7]=26,[8]=26,[9]=16}
+local arr = {[0]='A',[1]='B',[2]='C',[3]='D',[4]='E',[5]='F'}
+
 function script.ICMain(dt)
 --ui.windowSize().x
-    local Csize = ui.calcItemWidth()
-    if Csize < 355 then
-        local num = 355
-        if Csize > 255 then num = Csize + 100 end
-        ui.pushItemWidth(num)
-    else
-        ui.pushItemWidth(Csize + 100)
-    end
-    ui.icon('IClicker.png', vec2(14,14), rgbm(0, 1, 0, 1))
+
+    ui.icon('IClicker.png', vec2(16,16), rgbm(0, 1, 0, 1))
     ui.sameLine(0, 5)
-    ui.header('Main Settings:')
+    ui.header('Settings:')
+
     ui.separator()
-    if ui.checkbox("Sync Clicks to indicator lights", settings.EnableSync) then
---        ac.setMessage('Sync may not work yet','... and it may break the script!')
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableSync = not settings.EnableSync
-    end
-    if ui.itemHovered() then
-        if vercode <= 2076 then ui.setTooltip('Not working yet! (will disable indicator soundFX)') end
-    end
-    if not settings.EnableSync then
-        local delayHz = tonumber(string.format("%.4f", (1/settings.Delay)))
-        settings.Delay = ui.slider('Delay/Frequency', settings.Delay, 0.1, 0.7, 'T: %.4fms/F: '..delayHz..'Hz')
-        if ui.itemHovered() then
-            ui.setTooltip('Delay/Frequency of indicator clicks')
-        end
-    end
+    ui.bulletText('Indicator FX')
+    ui.sameLine(0,16)
+    settings.Turnsoundfx = ui.combo('##IndicatorFX', settings.Turnsoundfx, soundNames)
+    if ui.itemHovered() then ui.setTooltip('Select soundFX for indicators') end
+    ui.sameLine(0,5)
+    settings.Volume = ui.slider('##Volume00', settings.Volume*100, 0, 100, 'Volume: %.0f%%')/100
+    if ui.itemHovered() then ui.setTooltip('Volume of Indicator clicks (0 = Off)') end
+
     ui.separator()
-    settings.Volume = ui.slider('Volume', settings.Volume*100, 0, 100, 'Volume: %.2f%%')/100
-    ui.separator()
-    if ui.checkbox("Wiper Clicks", settings.EnableWip) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableWip = not settings.EnableWip
-        if doClickOff.Wiper then
-            doClickOff.Wiper = false
+    for i = 0, 9 do
+        ui.bulletText(sndsettings[i].name..' FX')
+
+        ui.sameLine(0,padding[i])
+        if i==9 then
+            if ui.checkbox("##Click Test", doClickOff.Test) then
+                if ui.keyboardButtonDown(ui.KeyIndex.Control) and ui.keyboardButtonDown(ui.KeyIndex.Shift) then
+                    settings.EnableDebug = not settings.EnableDebug
+                else
+                    doClickOff.Test = not doClickOff.Test
+                    local files = SFiles[sndsettings[i].soundfx]
+                    if doClickOff.Test then
+                        fncPlayMedia (files.ON,sndsettings[i].volume)
+                    else
+                        fncPlayMedia (files.OFF,sndsettings[i].volume)
+                    end
+                end
+            end
+            if ui.itemHovered() then
+                ui.setTooltip('Test selected soundFX')
+            end
+            ui.sameLine(0,5)
         end
-        if ui.itemHovered() then
-            ui.setTooltip('Volume of indicator clicks')
-        end
+        sndsettings[i].soundfx = ui.combo('##combo'..sndsettings[i].sname, sndsettings[i].soundfx, soundNames)
+        if ui.itemHovered() then ui.setTooltip('Select soundFX for '..sndsettings[i].name) end
+        ui.sameLine(0,5)
+        sndsettings[i].volume = ui.slider('##Vol'..sndsettings[i].sname, sndsettings[i].volume*100, 0, 100, 'Volume: %.0f%%')/100
+        if ui.itemHovered() then ui.setTooltip('Volume of '..sndsettings[i].name..' clicks (0 = Off)') end
+        ui.separator()
     end
-    ui.sameLine(0, 25)
-    if ui.checkbox("Highbeam Clicks", settings.EnableHB) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableHB = not settings.EnableHB
-        if doClickOff.HB then
-            doClickOff.HB = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when highbeams is enabled/disabled')
-        end
-    end
-    if ui.checkbox("Extra A Clicks", settings.EnableEA) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableEA = not settings.EnableEA
-        if doClickOff.EA then
-            doClickOff.EA = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when Extra A is enabled/disabled')
-        end
-    end
-    ui.sameLine(0, 15)
-    if ui.checkbox("Extra B Clicks", settings.EnableEB) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableEB = not settings.EnableEB
-        if doClickOff.EB then
-            doClickOff.EB = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when Extra B is enabled/disabled')
-        end
-    end
-    ui.sameLine(0, 15)
-    if ui.checkbox("Extra C Clicks", settings.EnableEC) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableEC = not settings.EnableEC
-        if doClickOff.EC then
-            doClickOff.EC = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when Extra C is enabled/disabled')
-        end
-    end
-    if ui.checkbox("Extra D Clicks", settings.EnableED) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableED = not settings.EnableED
-        if doClickOff.ED then
-            doClickOff.ED = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when Extra D is enabled/disabled')
-        end
-    end
-    ui.sameLine(0, 15)
-    if ui.checkbox("Extra E Clicks", settings.EnableEE) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableEE = not settings.EnableEE
-        if doClickOff.EE then
-            doClickOff.EE = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when Extra E is enabled/disabled')
-        end
-    end
-    ui.sameLine(0, 15)
-    if ui.checkbox("Extra F Clicks", settings.EnableEF) then
-        fncPlayMedia ('Unbenannt2.flac',settings.Volume,1)
-        settings.EnableEF = not settings.EnableEF
-        if doClickOff.EF then
-            doClickOff.EF = false
-        end
-        if ui.itemHovered() then
-            ui.setTooltip('Clicks when Extra F is enabled/disabled')
-        end
-    end
-    ui.separator()
+
     if ui.button('Save car settings') then
-        fncPlayMedia ('Woosh.mp3',settings.Volume,1)
         FncSetAndSave (true)
         savedTxt = 'Car settings saved!'
     end
     if ui.itemHovered() then
         ui.setTooltip('Saves settings that will load for this car only (skips default settings)')
     end
-    ui.dummy(vec2(0,0))
+    ui.sameLine(0,5)
     if ui.button('Save default settings') then
-        fncPlayMedia ('Woosh.mp3',settings.Volume,1)
         FncSetAndSave (false)
         savedTxt = 'Default settings saved!'
     end
     if ui.itemHovered() then
         ui.setTooltip('Saves settings that will load for all cars (if no car settings are saved)')
     end
-    ui.separator()
-    local minsize = 125
-    if Csize > minsize then
-        local offset = 55
-        local num = Csize-minsize
-        if num < minsize then num = minsize end
-        if Csize-offset > minsize then num = Csize-offset end
-        ui.pushItemWidth(num)
-    else
-        ui.pushItemWidth(minsize)
+    ui.sameLine(0,10)
+    local colour = rgbm(1,1,1,0)
+    if car.turningLeftLights and doClickOff.Turn then
+        colour = rgbm(0,2,0,2)
     end
-    ui.bulletText(car.acceleration)
-    ui.labelText('* IClicker by Halvhjearne!',savedTxt)
+    ui.icon(ui.Icons.ArrowLeft,vec2(20,20),colour)
+    ui.sameLine(0,5)
+    colour = rgbm(1,1,1,0)
+    if car.turningRightLights and doClickOff.Turn then
+        colour = rgbm(0,1,0,1)
+    end
+    ui.icon(ui.Icons.ArrowRight,vec2(20,20),colour)
+    colour = rgbm(1,1,1,0)
+    if not car.lowBeams and car.headlightsActive then
+        colour = rgbm(0,1,0,1)
+    end
+    ui.sameLine(0,5)
+    ui.textColored('HB',colour)
+    colour = rgbm(1,1,1,0)
+    if car.headlightsActive then
+        colour = rgbm(0,1,0,1)
+    end
+    ui.sameLine(0,5)
+    ui.textColored('LB',colour)
+    for i = 0, 5 do
+        colour = rgbm(1,1,1,0)
+        if car['extra'..arr[i]] then
+            colour = rgbm(0,1,0,1)
+        end
+        ui.sameLine(0,5)
+        ui.textColored(arr[i],colour)
+    end
+    colour = rgbm(1,1,1,0)
+    if car.wiperMode > 0 then
+        colour = rgbm(0,1,0,1)
+    end
+    ui.sameLine(0,5)
+    ui.textColored('W'..car.wiperMode,colour)
+    ui.separator()
+    ui.labelText(savedTxt,'* IClicker by Halvhjearne!')
 end
 
 function script.update(dt)
 --    ac.setMessage('turningLights: '..tostring(car.turningLeftLights or car.turningRightLights),'turningLightsActivePhase: '..tostring(car.turningLightsActivePhase))
 -- no need to include hazards
     local IsindicatorsOn = car.turningLeftLights or car.turningRightLights
+    local files = SFiles[settings.Turnsoundfx]
     if settings.EnableSync and vercode > 2076 then
         IsindicatorsOn = car.turningLightsActivePhase and (car.turningLeftLights or car.turningRightLights)
-        local files = SFiles[SFileVals.Turn]
         if IsindicatorsOn and not doClickOff.Turn then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
+            fncPlayMedia (files.ON,settings.Volume)
             doClickOff.Turn = true
         end
         if not IsindicatorsOn and doClickOff.Turn then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
+            fncPlayMedia (files.OFF,settings.Volume)
             doClickOff.Turn = false
         end
     else
         if IsindicatorsOn then
             if counter >= (timeVar + settings.Delay) then
-                local files = SFiles[SFileVals.Turn]
                 if doClickOff.Turn then
-                    fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
+                    fncPlayMedia (files.OFF,settings.Volume)
                     doClickOff.Turn = false
                 else
-                    fncPlayMedia (files.ON,settings.Volume,settings.playRate)
+                    fncPlayMedia (files.ON,settings.Volume)
                     doClickOff.Turn = true
                 end
                 timeVar = counter
@@ -525,104 +464,39 @@ function script.update(dt)
         else
             if doClickOff.Turn then
                 if counter >= (timeVar + settings.Delay) then
-                    local files = SFiles[SFileVals.Turn]
-                    fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
+                    fncPlayMedia (files.OFF,settings.Volume)
                     doClickOff.Turn = false
                     timeVar = counter - settings.Delay
                 end
             end
         end
     end
-    if settings.EnableWip then
-        local wiperMode = math.floor(car.wiperMode, 0.1)
-        local files = SFiles[SFileVals.Wiper]
-        if wiperMode ~= 0 and not doClickOff.Wiper then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.Wiper = true
-        end
-        if wiperMode == 0 and doClickOff.Wiper then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.Wiper = false
-        end
-    end
-    if settings.EnableHB then
-        local IsHBOn = not car.lowBeams and car.headlightsActive
-        local files = SFiles[SFileVals.HB]
-        if IsHBOn and not doClickOff.HB then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.HB = true
-        end
-        if not IsHBOn and doClickOff.HB then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.HB = false
-        end
-    end
-    if settings.EnableEA then 
-        local files = SFiles[SFileVals.EA]
-        if car.extraA and not doClickOff.EA then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.EA = true
-        end
-        if not car.extraA and doClickOff.EA then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.EA = false
-        end
-    end
-    if settings.EnableEB then 
-        local files = SFiles[SFileVals.EB]
-        if car.extraB and not doClickOff.EB then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.EB = true
-        end
-        if not car.extraB and doClickOff.EB then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.EB = false
-        end
-    end
-    if settings.EnableEC then 
-        local files = SFiles[SFileVals.EC]
-        if car.extraC and not doClickOff.EC then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.EC = true
-        end
-        if not car.extraC and doClickOff.EC then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.EC = false
-        end
-    end
-    if settings.EnableED then 
-        local files = SFiles[SFileVals.ED]
-        if car.extraD and not doClickOff.ED then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.ED = true
-        end
-        if not car.extraD and doClickOff.ED then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.ED = false
-        end
-    end
-    if settings.EnableEE then 
-        local files = SFiles[SFileVals.EE]
-        if car.extraE and not doClickOff.EE then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.EE = true
-        end
-        if not car.extraE and doClickOff.EE then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.EE = false
-        end
-    end
-    if settings.EnableEF then 
-        local files = SFiles[SFileVals.EF]
-        if car.extraF and not doClickOff.EF then
-            fncPlayMedia (files.ON,settings.Volume,settings.playRate)
-            doClickOff.EF = true
-        end
-        if not car.extraF and doClickOff.EF then
-            fncPlayMedia (files.OFF,settings.Volume,settings.playRate)
-            doClickOff.EF = false
+
+    for i = 0, 8 do
+        if sndsettings[i].volume > 0 then
+            local files = SFiles[sndsettings[i].soundfx]
+            local stm = false
+            if i == 0 then
+                stm = car.wiperMode ~= 0
+            elseif i == 1 then
+                stm = not car.lowBeams and car.headlightsActive
+            else
+                stm = car[sndsettings[i].command]
+            end
+            if stm and not doClickOff[sndsettings[i].sname] then
+                fncPlayMedia (files.ON,sndsettings[i].volume)
+                doClickOff[sndsettings[i].sname] = true
+            end
+            if not stm and doClickOff[sndsettings[i].sname] then
+                fncPlayMedia (files.OFF,sndsettings[i].volume)
+                doClickOff[sndsettings[i].sname] = false
+            end
         end
     end
     counter = counter + dt
-    return false
 end
+
+-- this can cause headaches
+-- [INSTRUMENTS]
+-- FUEL_SPLASH_MULT=-0
+-- HAZARDS_G_THRESHOLD=1.2
