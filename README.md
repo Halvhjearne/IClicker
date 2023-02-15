@@ -1,6 +1,6 @@
 # IClicker
 
-![screenshot](https://github.com/Halvhjearne/IClicker/blob/main/screenshot.png?raw=true)
+![screenshot](https://github.com/Halvhjearne/IClicker/blob/main/screenshot.PNG?raw=true)
 
 An app for assetto corsa to allow audible indicator clicks and more by Halvhjearne
 
