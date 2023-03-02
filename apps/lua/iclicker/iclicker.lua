@@ -12,7 +12,6 @@ local settings = {
     EnableSync = false, -- true / false
     Turnsoundfx = 1,
     menuvolume = 0.2,
-    speedwarning = false,
     warningspeed = 110,
     warningloop = false,
     warningdelay = 2,
@@ -70,6 +69,16 @@ local SFiles = {
         OFF = 'BUSoff.flac',
         NAME = 'Bus',
     },
+    [7] = {
+        ON = 'BeltWarning_single.flac',
+        OFF = '',
+        NAME = 'Bell 1',
+    },
+    [8] = {
+        ON = 'BeltWarningPitch_single.flac',
+        OFF = '',
+        NAME = 'Bell 2',
+    },
 }
 
 --[[
@@ -118,7 +127,7 @@ end
 local sndsettings = {
     [0] = {soundfx=1,volume=0.2,name='Wiper',sname='Wiper',command='wiperMode'},
     [1] = {soundfx=1,volume=0.2,name='Highbeam',sname='HB',command=''},
-    [2] = {soundfx=1,volume=0.2,name='Lowbeam',sname='LB',command='headlightsActive'},
+    [2] = {soundfx=1,volume=0.0,name='Lowbeam',sname='LB',command='headlightsActive'},
     [3] = {soundfx=1,volume=0.2,name='Extra A',sname='EA',command='extraA'},
     [4] = {soundfx=1,volume=0.2,name='Extra B',sname='EB',command='extraB'},
     [5] = {soundfx=1,volume=0.2,name='Extra C',sname='EC',command='extraC'},
@@ -141,6 +150,9 @@ if not io.fileExists(ext_cfg) then
     if not io.fileExists(ac.getFolder(ac.FolderID.ExtCfgSys)..'/cars/loaded/'..ac.getCarID(0)..'.ini') then
         return nil
     end
+else
+    local data = ac.INIConfig.load(ext_cfg)
+    data:get('INSTRUMENTS', 'HAZARDS_G_THRESHOLD', HAZARDS_G_THRESHOLD)
 end
 
 local dir = ac.getFolder(ac.FolderID.ExtCfgUser)..'/iclicker'
@@ -186,7 +198,7 @@ if settings.Delay > 0.7 or settings.Delay < 0.1 then
 end
 
 -- prevent first click delay?
-local snd = ui.MediaPlayer():setAutoPlay(true):setVolume(0)
+ui.MediaPlayer():setAutoPlay(true):setVolume(0)
 --if not myPlayer:supportedAsync() then
 --    savedTxt = 'OS does not support the media player!'
 --end
@@ -197,8 +209,6 @@ local function fncPlayMedia (Sfile,vv)
         local myPlayer = ui.MediaPlayer():setAutoPlay(true):setVolume(vv)
         myPlayer:setSource(Sfile):setAutoPlay(true):setVolume(vv):setPlaybackRate(1)
         return myPlayer
-    else
-        return nil
     end
 end
 
@@ -272,41 +282,32 @@ function script.ICMainSettings(dt)
     end
     ui.separator()
     ui.bulletText('Speed Warning')
-    local txt = '- Disabled'
-    if settings.speedwarning then
-        txt = '##SpeedWarning'
+    if ui.itemHovered() then ui.setTooltip('Warning when speed exceed x Km/h') end
+    ui.dummy(0)
+    ui.sameLine(0,27)
+    settings.warningspeed = ui.slider('##SpeedWarnslide', settings.warningspeed, 1, 500, 'Speed: %.0f% Km/h')
+    if ui.itemHovered() then ui.setTooltip('Warning sound when speed exceed x Km/h') end
+    ui.dummy(0)
+    ui.sameLine(0,27)
+    sndsettings[9].soundfx = ui.combo('##SpeedWarncombo'..sndsettings[9].sname, sndsettings[9].soundfx, soundNames)
+    if ui.itemHovered() then ui.setTooltip('Select soundFX for speed warning') end
+    ui.dummy(0)
+    ui.sameLine(0,26)
+    sndsettings[9].volume = ui.slider('##SpeedWarnVolume', sndsettings[9].volume*100, 0, 100, 'Volume: %.0f%%')/100
+    if ui.itemHovered() then ui.setTooltip('Volume of Speed warning (0 = Off)') end
+    if settings.warningloop then
+        ui.dummy(0)
+        ui.sameLine(0,26)
+        settings.warningdelay = ui.slider('##WarningDelay', settings.warningdelay, 0.1, 10, 'Delay: %.1f sec')
+        if ui.itemHovered() then ui.setTooltip('Delay between warning sounds') end
     end
-    if ui.checkbox(txt, settings.speedwarning) then
-        settings.speedwarning = not settings.speedwarning
+    ui.dummy(0)
+    ui.sameLine(0,26)
+    if ui.checkbox('Loop warning', settings.warningloop) then
+        settings.warningloop = not settings.warningloop
         fncPlayMedia (menusnd.donk,settings.menuvolume)
     end
-    if ui.itemHovered() then ui.setTooltip('Warning when speed exceed x Km/h') end
-    if settings.speedwarning then
-        ui.sameLine(0,5)
-        settings.warningspeed = ui.slider('##SpeedWarnslide', settings.warningspeed, 1, 500, 'Speed: %.0f% Km/h')
-        if ui.itemHovered() then ui.setTooltip('Warning sound when speed exceed x Km/h') end
-        ui.dummy(0)
-        ui.sameLine(0,27)
-        sndsettings[9].soundfx = ui.combo('##SpeedWarncombo'..sndsettings[9].sname, sndsettings[9].soundfx, soundNames)
-        if ui.itemHovered() then ui.setTooltip('Select soundFX for speed warning') end
-        ui.dummy(0)
-        ui.sameLine(0,26)
-        sndsettings[9].volume = ui.slider('##SpeedWarnVolume', sndsettings[9].volume*100, 0, 100, 'Volume: %.0f%%')/100
-        if ui.itemHovered() then ui.setTooltip('Volume of Speed warning (0 = Off)') end
-        if settings.warningloop then
-            ui.dummy(0)
-            ui.sameLine(0,26)
-            settings.warningdelay = ui.slider('##WarningDelay', settings.warningdelay, 0.1, 10, 'Delay: %.1f sec')
-            if ui.itemHovered() then ui.setTooltip('Delay between warning sounds') end
-        end
-        ui.dummy(0)
-        ui.sameLine(0,26)
-        if ui.checkbox('Loop warning', settings.warningloop) then
-            settings.warningloop = not settings.warningloop
-            fncPlayMedia (menusnd.donk,settings.menuvolume)
-        end
-        if ui.itemHovered() then ui.setTooltip('Will loop the speed warning over and over..') end
-    end
+    if ui.itemHovered() then ui.setTooltip('Will loop the speed warning over and over..') end
     ui.separator()
     ui.header('Hazards G-forces "problem" fix:')
     ui.bullet()
@@ -549,13 +550,11 @@ function script.update(dt)
             elseif i == 9 then
                 stm = car.speedKmh >= settings.warningspeed
                 if doClickOff.Speed and settings.warningloop then
-                    if snd:ended() then
-                        if timeVar2 == 0 then
-                            timeVar2 = counter
-                        end
+                    if timeVar2 == 0 then
+                        timeVar2 = counter
                     end
                     if counter >= timeVar2+settings.warningdelay then
-                        snd:play()
+                        fncPlayMedia (files.ON,sndsettings[i].volume)
                         timeVar2 = 0
                     end
                 end
@@ -563,19 +562,15 @@ function script.update(dt)
                 stm = car[sndsettings[i].command]
             end
             if stm and not doClickOff[sndsettings[i].sname] then
-                if i == 9 then
-                    snd = fncPlayMedia (files.ON,sndsettings[i].volume)
-                else
-                    fncPlayMedia (files.ON,sndsettings[i].volume)
-                end
+                fncPlayMedia (files.ON,sndsettings[i].volume)
                 doClickOff[sndsettings[i].sname] = true
             end
             if not stm and doClickOff[sndsettings[i].sname] then
-                fncPlayMedia (files.OFF,sndsettings[i].volume)
-                doClickOff[sndsettings[i].sname] = false
                 if i == 9 then
                     timeVar2 = 0
                 end
+                fncPlayMedia (files.OFF,sndsettings[i].volume)
+                doClickOff[sndsettings[i].sname] = false
             end
         end
     end
